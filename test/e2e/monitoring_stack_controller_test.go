@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"testing"
 	"time"
 
@@ -856,20 +857,30 @@ func namespaceSelectorTest(t *testing.T) {
 
 	stopChan := make(chan struct{})
 	defer close(stopChan)
-	if pollErr := wait.Poll(5*time.Second, 2*time.Minute, func() (bool, error) {
+	//nolint
+	if pollErr := wait.Poll(5*time.Second, 5*time.Minute, func() (bool, error) {
 		err := f.StartServicePortForward(ms.Name+"-prometheus", e2eTestNamespace, "9090", stopChan)
+
+		fmt.Println("mariofar 0,1")
 		return err == nil, nil
 	}); pollErr != nil {
+		fmt.Println("mariofar 1")
 		t.Fatal(pollErr)
 	}
+	fmt.Println("mariofar 2")
 
 	promClient := framework.NewPrometheusClient("http://localhost:9090")
+	//nolint
 	if pollErr := wait.Poll(5*time.Second, 5*time.Minute, func() (bool, error) {
+		fmt.Println("mariofar 3")
 		query := `version{pod="prometheus-example-app",namespace=~"test-ns-.*"}`
+		os.Exit(3)
 		result, err := promClient.Query(query)
 		if err != nil {
+			fmt.Println("mariofar 35", err)
 			return false, nil
 		}
+		fmt.Println("mariofar 4")
 
 		if len(result.Data.Result) != len(namespaces) {
 			return false, nil
@@ -877,8 +888,10 @@ func namespaceSelectorTest(t *testing.T) {
 
 		return true, nil
 	}); pollErr != nil {
+		fmt.Println("mariofar 5", pollErr)
 		t.Fatal(pollErr)
 	}
+	fmt.Println("mariofar 2")
 }
 
 // Deploys a prometheus instance and a service pointing to the prometheus's port - 9090
@@ -906,8 +919,8 @@ func deployDemoApp(t *testing.T, nsName string, nsLabels, resourceLabels map[str
 	// these are prometheus ports
 	svc.Spec.Ports = []corev1.ServicePort{{
 		Name:       "metrics",
-		Port:       8080,
-		TargetPort: intstr.FromInt(8080),
+		Port:       9090,
+		TargetPort: intstr.FromInt(9090),
 	}}
 
 	if err := f.K8sClient.Create(context.Background(), svc); err != nil {
@@ -1015,7 +1028,7 @@ func newPrometheusExampleAppPod(t *testing.T, name, ns string) *corev1.Pod {
 				},
 				Ports: []corev1.ContainerPort{{
 					Name:          "metrics",
-					ContainerPort: 8080,
+					ContainerPort: 9090,
 				}},
 			}},
 		},

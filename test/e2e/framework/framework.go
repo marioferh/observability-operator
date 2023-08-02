@@ -41,24 +41,32 @@ func (f *Framework) StartPortForward(podName string, ns string, port string, sto
 	}
 
 	path := fmt.Sprintf("/api/v1/namespaces/%s/pods/%s/portforward", ns, podName)
+	fmt.Println("mariofar start port forward 44 path", path)
 	hostIP := strings.TrimLeft(f.Config.Host, "htps:/")
 	serverURL := url.URL{Scheme: "https", Path: path, Host: hostIP}
 	dialer := spdy.NewDialer(upgrader, &http.Client{Transport: roundTripper}, http.MethodPost, &serverURL)
 
 	readyChan := make(chan struct{}, 1)
 	out, errOut := new(bytes.Buffer), new(bytes.Buffer)
+	fmt.Println("mariofar start port forward 50")
 	forwarder, err := portforward.New(dialer, []string{port}, stopChan, readyChan, out, errOut)
+	fmt.Println("mariofar start port forward 53", err)
+	fmt.Println("mariofar start port forward 54", readyChan)
 	if err != nil {
 		return err
 	}
 
 	go func() {
+		fmt.Println("mariofar start port forward 58", err)
 		if err := forwarder.ForwardPorts(); err != nil {
+			fmt.Println("mariofar start port forward 60", err)
 			panic(err)
 		}
 	}()
+	fmt.Println("mariofar start port forward 65", err)
 
 	<-readyChan
+	fmt.Println("mariofar after ready chan", err)
 	return nil
 }
 
@@ -66,6 +74,7 @@ func (f *Framework) StartPortForward(podName string, ns string, port string, sto
 //
 // The function call blocks until the port forwarding proxy server is ready to receive connections.
 func (f *Framework) StartServicePortForward(serviceName string, ns string, port string, stopChan chan struct{}) error {
+	fmt.Println("mariofar start service port 1")
 	pods, err := f.getPodsForService(serviceName, ns)
 	if err != nil {
 		return err
@@ -101,13 +110,17 @@ func (f *Framework) getPodsForService(name string, namespace string) ([]corev1.P
 		Namespace: namespace,
 		Name:      name,
 	}
+	fmt.Println("mariofar getpordsforservice 105")
 	if err := f.K8sClient.Get(context.Background(), key, &svc); err != nil {
+		fmt.Println("mariofar getpordsforservice 107", err)
 		return nil, err
 	}
 
 	selector := svc.Spec.Selector
 	var pods corev1.PodList
+	fmt.Println("mariofar getpordsforservice 113")
 	if err := f.K8sClient.List(context.Background(), &pods, client.MatchingLabels(selector)); err != nil {
+		fmt.Println("mariofar getpordsforservice 115", err)
 		return nil, err
 	}
 
